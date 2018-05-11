@@ -6,23 +6,12 @@ class PIDAgent(object):
     """A naive pid implementation"""
     def __init__(self, config, action_space):
         self.config = config
-        self.t = 0.0
-        self.step = 2.5/500.0
-
 
     def act(self, states, reward, done):
-        self.t += self.step
-        x = states[0]
-        x_dot = states[1]
-        theta = states[2]
-        theta_dot = states[3]
-        
-        err_theta = self.config['theta']['desired']-theta
-        err_dot_theta = -theta_dot
-        
-        des_x = self.config['x']['desired']*math.sin(2*math.pi*self.t)
-        err_x = des_x-x
-        err_dot_x = -x_dot
+        err_x = states[0]
+        err_dot_x = states[1]
+        err_theta = states[2]
+        err_dot_theta = states[3]
         
         u_1 = self.config['theta']['kp']*err_theta + self.config['theta']['kd']*err_dot_theta
         u_2 = self.config['x']['kp']*err_x + self.config['x']['kd']*err_dot_x
@@ -42,30 +31,41 @@ if __name__ == '__main__':
     config['theta']['desired'] = 0.0
     config['theta']['c'] = 0.8
     config['theta']['kp'] = 1.0
-    config['theta']['kd'] = 0.3
+    config['theta']['kd'] = 0.75#0.3
     config['theta']['ki'] = 0.0
     
     config['x']['desired'] = 1.5
     config['x']['c'] = 0.2
     config['x']['kp'] = 0.7
-    config['x']['kd'] = 1.0
+    config['x']['kd'] = 2.0
     config['x']['ki'] = 0.0
     
+    agent = PIDAgent(config, env.action_space)
+    
     states = env.reset()
+    err = [-s for s in states]
     desired_x = [-1.5,1.5]
-    run_count = 100
+    run_count = 20
     avg_score = 0.0
     for n in range(run_count):
         score = 0
         done = False
         reward = 0.0
-        config['x']['desired'] = desired_x[n%len(desired_x)]
-        agent = PIDAgent(config, env.action_space)
         states = env.reset()
+        des_x = 0.0
+        des_theta = 0.0
         while not done:
-            action = agent.act(states, reward, done)
+            action = agent.act(err, reward, done)
             states, reward, done, _ = env.step(action)
-            #print(states[0])
+            last_des_x = des_x
+            des_x = desired_x[n%len(desired_x)]*math.sin(2.0*math.pi*2.5*score/500.0)
+            last_des_theta = des_theta
+            des_theta = 0.2*math.sin(2.0*math.pi*20.0*score/500.0)
+            err[0] = des_x-states[0]
+            err[1] = (des_x-last_des_x)-states[1]
+            err[2] = des_theta-states[2]
+            err[3] = (des_theta-last_des_theta)-states[3]
+            #print(states[2])
             score += reward
             env.render()
         avg_score += score
