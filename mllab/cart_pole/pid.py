@@ -1,13 +1,17 @@
 import gym
 from gym import wrappers, logger
+import math
 
 class PIDAgent(object):
     """A naive pid implementation"""
     def __init__(self, config, action_space):
         self.config = config
+        self.t = 0.0
+        self.step = 2.5/500.0
 
 
     def act(self, states, reward, done):
+        self.t += self.step
         x = states[0]
         x_dot = states[1]
         theta = states[2]
@@ -16,7 +20,8 @@ class PIDAgent(object):
         err_theta = self.config['theta']['desired']-theta
         err_dot_theta = -theta_dot
         
-        err_x = self.config['x']['desired']-x
+        des_x = self.config['x']['desired']*math.sin(2*math.pi*self.t)
+        err_x = des_x-x
         err_dot_x = -x_dot
         
         u_1 = self.config['theta']['kp']*err_theta + self.config['theta']['kd']*err_dot_theta
@@ -37,7 +42,7 @@ if __name__ == '__main__':
     config['theta']['desired'] = 0.0
     config['theta']['c'] = 0.8
     config['theta']['kp'] = 1.0
-    config['theta']['kd'] = 0.5
+    config['theta']['kd'] = 0.3
     config['theta']['ki'] = 0.0
     
     config['x']['desired'] = 1.5
@@ -47,8 +52,9 @@ if __name__ == '__main__':
     config['x']['ki'] = 0.0
     
     states = env.reset()
-    desired_x = [-1.5,0.0,1.5]
-    run_count = 10
+    desired_x = [-1.5,1.5]
+    run_count = 100
+    avg_score = 0.0
     for n in range(run_count):
         score = 0
         done = False
@@ -59,13 +65,13 @@ if __name__ == '__main__':
         while not done:
             action = agent.act(states, reward, done)
             states, reward, done, _ = env.step(action)
-            print(states[0])
+            #print(states[0])
             score += reward
             env.render()
-            #print(score)
+        avg_score += score
+        print("run #{}: score = {}".format(n+1,score))
     env.close()
-    print("**********************")
-    print("**********************")
-    print(score)
-    print("**********************")
-    print("**********************")
+    
+    print("===================================")
+    print("average score after {} runs = {}".format(n+1,avg_score/(n+1)))
+    print("===================================")
