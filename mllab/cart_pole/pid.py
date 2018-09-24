@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import gym
 from gym import wrappers, logger
 import math
@@ -16,16 +18,16 @@ class PIDAgent(object):
         err_dot_x = states[1]
         err_theta = states[2]
         err_dot_theta = states[3]
-        
+
         u_1 = self.config['theta']['kp']*err_theta + self.config['theta']['kd']*err_dot_theta
-        
+
         self.err_x_sum += err_x
         self.err_x_sum = min(self.x_sum_max,self.err_x_sum)
         self.err_x_sum = max(-self.x_sum_max,self.err_x_sum)
-        
+
         u_2 = self.config['x']['kp']*err_x + self.config['x']['kd']*err_dot_x + self.config['x']['ki']*self.err_x_sum
         pid = self.config['theta']['c']*u_1 + self.config['x']['c']*u_2
-        
+
         return 0 if pid>0 else 1
 
 def get_desired_x(traj_type, n):
@@ -48,13 +50,13 @@ if __name__ == '__main__':
                    help='the type of desired trajecotry for the cart')
     args = parser.parse_args()
     print(args.cart_traj_type)
-    
+
     """Test pid agent on OpenAI gym cart-pol-v1"""
     outdir = '/tmp/pid-agent-results'
     #logger.set_level(logger.WARN)
     env = gym.make('CartPole-v1')
     #env = wrappers.Monitor(env, directory=outdir, force=True)
-    
+
     config = dict(theta=dict(),x=dict())
     config['theta']['desired'] = 0.2
     config['theta']['c'] = 0.8
@@ -67,9 +69,9 @@ if __name__ == '__main__':
     config['x']['kp'] = 1.05
     config['x']['kd'] = 1.95
     config['x']['ki'] = 0.5
-    
+
     agent = PIDAgent(config, env.action_space)
-    
+
     states = env.reset()
     err = [-s for s in states]
     run_count = 20
